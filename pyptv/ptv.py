@@ -1,11 +1,12 @@
 import time
+import yaml
 
 import os
 import numpy as np
 from optv.calibration import Calibration
 from optv.correspondences import correspondences, MatchedCoords
 from optv.image_processing import preprocess_image
-from optv.orientation import point_positions
+from optv.orientation import point_positions, external_calibration, full_calibration
 from optv.parameters import ControlParams, VolumeParams, TrackingParams, \
     SequenceParams, TargetParams
 from optv.segmentation import target_recognition
@@ -13,6 +14,8 @@ from optv.tracking_framebuf import CORRES_NONE
 from optv.tracker import Tracker, default_naming
 from optv.epipolar import epipolar_curve
 from imageio import imread
+import parameters as par
+from optv.tracking_framebuf import TargetArray
 
 
 def simple_highpass(img, cpar):
@@ -355,10 +358,88 @@ def py_calibration(selection):
         It is the same function as show trajectories, just read from a different
         file 
         """
+def py_multiplanecalibration(exp):
 
+    '''parser = argparse.ArgumentParser()
+    parser.add_argument('config', help="Path to configuration YAML file.")
+    parser.add_argument('--dry-run', '-d', action='store_true', default=False,
+        help="Don't overwrite ori/addpar files with results.")
+    parser.add_argument('--renum', '-r', action='store_true', default=False,
+        help="Rewrite the fix/crd files renumbered and stop.")
+    args = parser.parse_args()
+    '''
     
     
+    filename='cal/cam.yaml'
+    yaml_args=yaml.load(file(filename))
+    print(yaml_args)
+    # Load fix/crd, renumbering along the way.
+    all_known = []
+    all_detected = []
+    
+    for plane in yaml_args['planes']:
+        known = np.loadtxt(plane['known'])
+        detected = np.loadtxt(plane['detected'])
+        
+        if np.any(detected == -999):
+            raise ValueError(("Using undetected points in {} will cause " + 
+                "silliness. Quitting.").format(plane['detected']))
+        
+        num_known = len(known)
+        num_detect = len(detected)
+        
+        if num_known != num_detect:
+            raise ValueError("Number of detected points (%d) does not match" +\
+            " number of known points (%d) for %s, %s" % \
+            (num_known, num_detect, plane['known'],  plane['detected']))
+        
+        if len(all_known) > 0:
+            detected[:,0] = all_detected[-1][-1,0] + 1 + np.arange(len(detected))
+        
+            # Save renumbered file, for PyPTV compatibility:
+   	'''        if args.renum:
+                known[:,0] = all_known[-1][-1,0] + 1 + np.arange(len(known))
+                np.savetxt(plane['known'], known, fmt="%10.5f")
+                np.savetxt(plane['detected'], detected, fmt="%9.5f")
+	'''
+
+        all_known.append(known)
+        all_detected.append(detected)
+    
+    #if args.renum:
+    #    sys.exit(0)
+    
+    # Make into the format needed for full_calibration.
+    all_known = np.vstack(all_known)[:,1:]
+    all_detected = np.vstack(all_detected)
+    
+    targs = TargetArray(len(all_detected))
+    for tix in xrange(len(all_detected)):
+        targ = targs[tix]
+        det = all_detected[tix]
+        
+        targ.set_pnr(tix)
+        targ.set_pos(det[1:])
     
 
+    op = par.OrientParams()
+    op.read()
+    cal = Calibration()
+    cal.from_file(yaml_args['target']['ori_file'], 
+        yaml_args['target']['addpar_file'])
     
-    
+    # recognized names for the flags:
+    names = ['cc', 'xh', 'yh', 'k1', 'k2', 'k3', 'p1', 'p2', 'scale', 'shear']
+    op_names = [op.cc, op.xh, op.yh, op.k1, op.k2, op.k3, op.p1, op.p2, op.scale, op.shear]
+
+    flags = []
+    for name, op_name in zip(names, op_names):
+        if (op_name ==1):
+    		flags.append(name)
+
+    print(flags)
+    flags = []
+    residuals, targ_ix, err_est = full_calibration(cal, all_known, targs, exp.cpar, flags)
+    # save the results
+    cal.write(yaml_args['target']['ori_file'], 
+            yaml_args['target']['addpar_file'])
