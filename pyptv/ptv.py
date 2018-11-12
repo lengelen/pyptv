@@ -13,7 +13,7 @@ from optv.segmentation import target_recognition
 from optv.tracking_framebuf import CORRES_NONE
 from optv.tracker import Tracker, default_naming
 from optv.epipolar import epipolar_curve
-from imageio import imread
+from skimage.io import imread
 import parameters as par
 from optv.tracking_framebuf import TargetArray
 
@@ -273,7 +273,7 @@ def py_traject_loop():
 
 # ------- Utilities ----------#
 
-def py_rclick_delete():
+def py_rclick_delete(x,y,n):
     """ a tool to delete clicked points
 
     def py_right_click(int coord_x, int coord_y, n_image):
@@ -306,7 +306,7 @@ def py_rclick_delete():
     """
     pass
 
-def py_get_pix_N():
+def py_get_pix_N(x,y,n):
     """
     def py_get_pix_N(x,y,n_image):
     global pix
@@ -373,8 +373,8 @@ def py_multiplanecalibration(exp):
 
 			c=exp.calParams.img_ori[i_cam][-9] # Get camera id
 
-			file_known=exp.MultiParams.plane_name[i]+'_cam'+str(c)+'.tif.fix'
-			file_detected=exp.MultiParams.plane_name[i]+'_cam'+str(c)+'.tif.crd'
+			file_known=exp.MultiParams.plane_name[i]+str(c)+'.tif.fix'
+			file_detected=exp.MultiParams.plane_name[i]+str(c)+'.tif.crd'
 
 			# Load calibration point information from plane i
 			known = np.loadtxt(file_known)
