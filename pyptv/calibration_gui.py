@@ -530,6 +530,7 @@ class CalibrationGUI(HasTraits):
             self.need_reset = 0
 
         man_ori_path = os.path.join(self.working_folder, 'man_ori.dat')
+
         with open(man_ori_path, 'r') as f:
             for i in range(self.n_cams):
                 self.camera[i]._x = []
@@ -544,6 +545,10 @@ class CalibrationGUI(HasTraits):
 
         # TODO: rewrite using Parameters subclass
         man_ori_par_path = os.path.join(self.par_path, 'man_ori.par')
+        manOriParams = par.ManOriParams(self.n_cams, [], path=self.par_path)
+        manOriParams.read()
+        nr = manOriParams.nr
+        print(manOriParams)
         f = open(man_ori_par_path, 'r')
         if f is None:
             self.status_text = "Error loading man_ori.par."
@@ -610,7 +615,10 @@ class CalibrationGUI(HasTraits):
             # if len(self.cal_points) > len(self.detections[i_cam]):
             #     raise ValueError("Insufficient detected points, need at least as"
             #                  "many as fixed points")
-
+            print('Calpoints')
+            print(len(self.cal_points['pos']))
+            print('Detectpoints')
+            print(len(self.detections[i_cam]))
             targs = match_detection_to_ref(self.cals[i_cam], self.cal_points['pos'],
                                            self.detections[i_cam], self.cpar)
             x, y, pnr = [], [], []
