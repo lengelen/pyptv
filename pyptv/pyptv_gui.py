@@ -619,6 +619,7 @@ class TreeMenuHandler(traitsui.api.Handler):
 
         else:
             ptv.py_sequence_loop(info.object)
+    
 
     def track_no_disp_action(self, info):
         """ track_no_disp_action uses ptv.py_trackcorr_loop(..) binding to call tracking without display
@@ -642,7 +643,7 @@ class TreeMenuHandler(traitsui.api.Handler):
             tracker.do_tracking()
 
         print('tracking without display finished')
-
+    
     def track_disp_action(self, info):
         """ tracking with display is handled by TrackThread which does processing step by step and
         waits for GUI to update before procceeding to the next step

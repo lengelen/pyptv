@@ -74,7 +74,7 @@ class CalHandler(Handler):
     def closed(self, info, is_ok):
         calibParams = info.object
         par_path = calibParams.par_path
-        print("inside CalHandler ", par_path)
+        #print("inside CalHandler ", par_path)
         Handler.closed(self, info, is_ok)
         if is_ok:
             img_cal_name = [calibParams.cam_1, calibParams.cam_2,
@@ -910,7 +910,6 @@ class Calib_Params(HasTraits):
         manOriParams = par.ManOriParams(self.n_img, [], path=self.par_path)
         manOriParams.read()
         nr = manOriParams.nr
-
 
         for i in range(self.n_img):
             for j in range(4): # 4 points per image

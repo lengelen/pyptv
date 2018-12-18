@@ -121,6 +121,7 @@ def py_correspondences_proc_c(exp):
 def py_determination_proc_c(n_cams, sorted_pos, sorted_corresp, corrected):
     """ Returns 3d positions """
 
+    
     # Control parameters
     cpar = ControlParams(n_cams)
     cpar.read_control_par('parameters/ptv.par')
@@ -140,16 +141,19 @@ def py_determination_proc_c(n_cams, sorted_pos, sorted_corresp, corrected):
     # Distinction between quad/trip irrelevant here.
     sorted_pos = np.concatenate(sorted_pos, axis=1)
     sorted_corresp = np.concatenate(sorted_corresp, axis=1)
-
+    
 
     flat = np.array([corrected[i].get_by_pnrs(sorted_corresp[i]) \
                      for i in xrange(len(cals))])
+   
     pos, rcm = point_positions(
         flat.transpose(1,0,2), cpar, cals)
-
+ 
     if len(cals) < 4:
         print_corresp = -1*np.ones((4,sorted_corresp.shape[1]))
         print_corresp[:len(cals),:] = sorted_corresp
+    else:
+        print_corresp = sorted_corresp
 
     # Save rt_is in a temporary file
     frame = 123456789 # just a temporary workaround. todo: think how to write
@@ -158,6 +162,7 @@ def py_determination_proc_c(n_cams, sorted_pos, sorted_corresp, corrected):
         for pix, pt in enumerate(pos):
             pt_args = (pix + 1,) + tuple(pt) + tuple(print_corresp[:,pix])
             rt_is.write("%4d %9.3f %9.3f %9.3f %4d %4d %4d %4d\n" % pt_args)
+
     # rt_is.close()
 
 
@@ -226,7 +231,9 @@ def py_sequence_loop(exp):
         if len(cals) < 4:
             print_corresp = -1*np.ones((4,sorted_corresp.shape[1]))
             print_corresp[:len(cals),:] = sorted_corresp
-
+        else:
+            print_corresp = sorted_corresp
+            
         # Save rt_is
         rt_is = open(default_naming['corres']+'.'+str(frame), 'w')
         rt_is.write(str(pos.shape[0]) + '\n')
@@ -248,27 +255,27 @@ def py_trackcorr_loop():
     pass
 
 def py_traject_loop():
-    """ Used to plot trajectories after the full run
+    #Used to plot trajectories after the full run
 
-    def py_traject_loop(seq):
-    global intx1_tr,intx2_tr,inty1_tr,inty2_tr,m1_tr
-    trajectories_c(seq, cpar)
-    intx1,intx2,inty1,inty2=[],[],[],[]
+    '''def py_traject_loop(seq):
+        global intx1_tr,intx2_tr,inty1_tr,inty2_tr,m1_tr
+        trajectories_c(seq, cpar)
+        intx1,intx2,inty1,inty2=[],[],[],[]
 
-    for i in range(cpar[0].num_cams):
-        intx1_t,intx2_t,inty1_t,inty2_t=[],[],[],[]
-        for j in range(m1_tr):
-            intx1_t.append(intx1_tr[i][j])
-            inty1_t.append(inty1_tr[i][j])
-            intx2_t.append(intx2_tr[i][j])
-            inty2_t.append(inty2_tr[i][j])
-        intx1.append(intx1_t)
-        inty1.append(inty1_t)
-        intx2.append(intx2_t)
-        inty2.append(inty2_t)
-    return intx1,inty1,intx2,inty2,m1_tr
+        for i in range(cpar[0].num_cams):
+            intx1_t,intx2_t,inty1_t,inty2_t=[],[],[],[]
+            for j in range(m1_tr):
+                intx1_t.append(intx1_tr[i][j])
+                inty1_t.append(inty1_tr[i][j])
+                intx2_t.append(intx2_tr[i][j])
+                inty2_t.append(inty2_tr[i][j])
+            intx1.append(intx1_t)
+            inty1.append(inty1_t)
+            intx2.append(intx2_t)
+            inty2.append(inty2_t)
+        return intx1,inty1,intx2,inty2,m1_tr
+    '''
 
-    """
 
 
 # ------- Utilities ----------#
@@ -360,77 +367,3 @@ def py_calibration(selection):
         It is the same function as show trajectories, just read from a different
         file
         """
-
-def py_multiplanecalibration(exp):
-	""" Performs multiplane calibration, in which for all cameras the pre-processed plane in multiplane.par al combined.
-		Overwrites the ori and addpar files of the cameras specified in cal_ori.par of the multiplane parameter folder
-        """
-
-	for i_cam in range(exp.n_cams): # iterate over all cameras
-		all_known = []
-		all_detected = []
-		for i in range(exp.MultiParams.n_planes): # combine all single planes
-
-			c=exp.calParams.img_ori[i_cam][-9] # Get camera id
-
-			file_known=exp.MultiParams.plane_name[i]+str(c)+'.tif.fix'
-			file_detected=exp.MultiParams.plane_name[i]+str(c)+'.tif.crd'
-
-			# Load calibration point information from plane i
-			known = np.loadtxt(file_known)
-			detected = np.loadtxt(file_detected)
-
-
-			if np.any(detected == -999):
-				raise ValueError(("Using undetected points in {} will cause " +
-				"silliness. Quitting.").format(file_detected))
-
-			num_known = len(known)
-			num_detect = len(detected)
-
-			if num_known != num_detect:
-				raise ValueError("Number of detected points (%d) does not match" +\
-				" number of known points (%d) for %s, %s" % \
-				(num_known, num_detect, file_known, file_detected))
-
-			if len(all_known) > 0:
-				detected[:,0] = all_detected[-1][-1,0] + 1 + np.arange(len(detected))
-
-			# Append to list of total known and detected points
-			all_known.append(known)
-			all_detected.append(detected)
-
-
-		# Make into the format needed for full_calibration.
-		all_known = np.vstack(all_known)[:,1:]
-		all_detected = np.vstack(all_detected)
-
-		targs = TargetArray(len(all_detected))
-		for tix in xrange(len(all_detected)):
-			targ = targs[tix]
-			det = all_detected[tix]
-
-			targ.set_pnr(tix)
-			targ.set_pos(det[1:])
-
-		# backup the ORI/ADDPAR files first
-		exp.backup_ori_files()
-
-		op = par.OrientParams()
-		op.read()
-
-		# recognized names for the flags:
-		names = ['cc', 'xh', 'yh', 'k1', 'k2', 'k3', 'p1', 'p2', 'scale', 'shear']
-		op_names = [op.cc, op.xh, op.yh, op.k1, op.k2, op.k3, op.p1, op.p2, op.scale, op.shear]
-
-		flags = []
-		for name, op_name in zip(names, op_names):
-			if (op_name ==1):
-				flags.append(name)
-
-		# Run the multiplane calibration
-		residuals, targ_ix, err_est = full_calibration(exp.cals[0], all_known, targs, exp.cpar, flags)
-
-		#Save the results
-		exp._write_ori(i_cam)
-		print('End multiplane')

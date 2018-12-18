@@ -585,21 +585,23 @@ class ManOriParams(Parameters):
         self.nr = nr
         self.path = path
 
-
     def filename(self):
         return "man_ori.par"
 
     def read(self):
+        #print("Reading manoriparams")
         try:
             with open(self.filepath(), 'r') as f:
-                self.nr = [[]]*self.n_img
+                self.nr =  [[]*4 for _ in xrange(self.n_img)]
                 for i in range(self.n_img):
                     for j in range(4): # always 4 points
                         self.nr[i].append(int(g(f)))
+                
         except:
             error(None, "Error reading from %s" % self.filepath())
 
     def write(self):
+        #print("Writing manoriparams")
         try:
             with open(self.filepath(), 'w') as f:
                 for i in range(self.n_img):
